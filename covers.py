@@ -4,7 +4,6 @@ from math import factorial
 import plotly.graph_objects as go
 import numpy as np
 import networkx as nx
-# import torch # only need for get_colour_signal
 
 # TODO: Make tests
 # TODO: Generalize to disconnected covers. Either by adapting isom, or by constructing from disjoint unions of smaller covers...
