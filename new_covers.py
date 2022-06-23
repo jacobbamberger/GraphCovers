@@ -1,14 +1,13 @@
-import torch_geometric
-from torch_geometric.data import Data
-import torch
 from itertools import product, permutations
 from math import factorial
-import networkx as nx
 
-# TODO: clean up
-# TODO: Object oriented
-# TODO: Remove node_map, and replace by mod computation on the go... Same with node_type
+import plotly.graph_objects as go
+import numpy as np
+import networkx as nx
+# import torch # only need for get_colour_signal
+
 # TODO: Make tests
+# TODO: Generalize to disconnected covers. Either by adapting isom, or by constructing from disjoint unions of smaller covers...
 
 class Cover():
     """ 
@@ -187,10 +186,157 @@ class Cover():
                  base graph's node that i cover.
         """
         num_nodes = self.nxGraph.order()
-        signal = torch.zeros((num_nodes, num_nodes//self.degree), dtype=torch.float)
+        signal = np.zeros((num_nodes, num_nodes//self.degree), dtype=np.float)
         for i in range(num_nodes):
             signal[i][self.node_map[i]]=1.
         return signal
+    
+    def plot(self, coord=None):
+        """
+        Plots the cover in 3 dimensions, by using the third dimension for fibers over a 
+        2 dimenisonal embedding of the base cover
+        
+        Parameters
+        ----------
+        coord : Optional: Dictionary or None
+                If available, the user can input a dictionary which defines
+                a 2 dimensional embedding of the nodes of the base graph as
+                follows: The keys are node indices of the base graph. The
+                values are length 2 list, corresponding to the embedding of
+                the key's node in the 2 dimensional plane.
+                If None, then 2dimensional embeddings are obtained from a
+                spring layout of the base graph.
+        """
+        
+        
+        G = self.nxGraph
+        base = nx.Graph(self.base_edge_index)
+        if coord is None:
+            # if no coordinates were available, compute some with spring layout
+            coord = nx.spring_layout(base, seed=100)
+        
+        # fix the coordinates
+        for i in range(9):
+                base.nodes[i]['pos'] = (coord[i][0], coord[i][1], 0.)
+        
+        # set cover coordinates
+        size = len(G.nodes())
+        scale = 0.5
+        for i in range(size):
+            G.nodes[i]['pos'] = (base.nodes[i%9]['pos'][0],
+                                base.nodes[i%9]['pos'][1],
+                                base.nodes[i%9]['pos'][2]+scale*float(i//9))
+
+        edge_x = []
+        edge_y = []
+        edge_z = []
+
+        # Get coordinates of edges
+        for edge in G.edges():
+            x0, y0, z0 = G.nodes[edge[0]]['pos']
+            x1, y1, z1 = G.nodes[edge[1]]['pos']
+            edge_x.append(x0)
+            edge_x.append(x1)
+            edge_x.append(None)
+            edge_y.append(y0)
+            edge_y.append(y1)
+            edge_y.append(None)
+            edge_z.append(z0)
+            edge_z.append(z1)
+            edge_z.append(None)
+
+        # plot all edges
+        edge_trace = go.Scatter3d(
+            x=edge_x, y=edge_y, z=edge_z,
+            line=dict(width=5, color='#888'),
+            hoverinfo='none',
+            mode='lines')
+
+        node_x = []
+        node_y = []
+        node_z = []
+
+        # get node coordinates
+        for node in G.nodes():
+            x, y, z = G.nodes[node]['pos']
+            node_x.append(x)
+            node_y.append(y)
+            node_z.append(z)
+
+        # plot nodes
+        node_trace = go.Scatter3d(
+            x=node_x, y=node_y, z=node_z,
+            mode='markers',
+            hoverinfo='text',
+            marker=dict(
+                showscale=False,
+                # colorscale options
+                #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
+                #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
+                #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
+                colorscale='YlGnBu',
+                reversescale=True,
+                color=np.arange(0, 1, 1/len(G.nodes())),
+                size=10,
+                line_width=2))
+
+        # plot figure
+        fig = go.Figure(data=[edge_trace, node_trace]
+                    )
+        
+        # setting the right zoom and size
+        fig.update_layout(width=1000,
+                        height=700,
+                        scene = dict(aspectratio = dict(x=1, y=0.2, z=0.7 )),
+                        showlegend=False
+                        )
+        
+        # Removing background etc 
+        fig.update_layout(scene = dict(
+                        xaxis = dict(
+                            #backgroundcolor="rgb(0, 0, 0)",
+                            #gridcolor="white",
+                            showbackground=False,
+                            showgrid=False,
+                            #showticklabels=False,
+                            visible=False,
+                            #zerolinecolor="white",
+                        ),
+                        yaxis = dict(
+                            #backgroundcolor="rgb(0, 0, 0)",
+                            #gridcolor="white",
+                            showbackground=False,
+                            showgrid=False,
+                            #showticklabels=False,
+                            visible=False,
+                            #zerolinecolor="white"
+                        ),
+                        zaxis = dict(
+                            #backgroundcolor="rgb(0, 0, 0)",
+                            #gridcolor="white",
+                            showbackground=False,
+                            showgrid=False,
+                            #showticklabels=False,
+                            visible=False,
+                            #zerolinecolor="white",
+                        ),
+                        camera=dict(
+                                up=dict(
+                                    x=0,
+                                    y=0,
+                                    z=1
+                                ),
+                                eye=dict(
+                                    x=0.1,
+                                    y=-1,
+                                    z=0.5,
+                                )
+                            ),
+                    ))
+
+        return fig
+
+
 
 def unique_edge(edge_index):
     """ 
@@ -216,14 +362,14 @@ def unique_edge(edge_index):
             unique += [(e[0], e[1])]
     return unique
 
-def graphCovers_fast(base_edge_index, degree, cycle_edge, nb_covers=2):
+def gen_graphCovers(base_edge_index, degree, nb_covers=2, cycle_edge=None):
     """
-    Fast version of graphCovers. Generates a number of covers of the
-    base graph with the sampling trick that it only samples nontrivial
-    perumatations on edges cycle_edge. If cycle_edge is chosen such
+    Generates all (or nb_covers) isomorphism types of degree `degree`
+    covers of the graph described byedge_index. If cycle_edge is chosen such
     that it consists of one edge per cycle for every cycle, such that
     no cycles have the same edge, then it covers all desired isomorphism
-    classes.   
+    classes. Having such a cycle_edge speeds up the algorithm considerably.
+    TODO: Compute cycle_edge automatically. 
 
     Parameters
     ----------
@@ -233,8 +379,9 @@ def graphCovers_fast(base_edge_index, degree, cycle_edge, nb_covers=2):
                       undirected graphs, if (i, j) is in the list, so is (j, i)
     degree : Int, greater than 1.
              Represents the degree (or number of sheets) of the cover to generate.
-    cycle_edge : List of length 2 lists/tuples
-                 Each element represents the edge for which we want nontrivial perumatations in the cover.
+    cycle_edge : Optional: None or List of length 2 lists/tuples
+                 If None then all possible permutations are tested, which is very slow.
+                 Otherwise, each element represents the edge for which we want nontrivial perumatations in the cover.
                  If the there is one element for each cycle (for example the complement of a spanning tree),
                  then the isomorphism classes will all be represented. When the base graph is connected,
                  the length of this list should be equal to the 1-\chi(G), where \chi is the Euler Characteristic.
@@ -251,10 +398,13 @@ def graphCovers_fast(base_edge_index, degree, cycle_edge, nb_covers=2):
     
     """
     unique = unique_edge(base_edge_index)
-    # make sure `cycle_edge_index` match with the `unique` representatives
-    cycle_edge_index = [i for i, e in enumerate(unique)
-                              if ([e[0], e[1]] in cycle_edge)
-                                  or ([e[1], e[0]] in cycle_edge)]
+    if cycle_edge is None:
+        cycle_edge_index = unique
+    else:
+        # make sure `cycle_edge_index` match with the `unique` representatives
+        cycle_edge_index = [i for i, e in enumerate(unique)
+                                if ([e[0], e[1]] in cycle_edge)
+                                    or ([e[1], e[0]] in cycle_edge)]
     graphCovers = []
     print("Total number of covers to check: ", factorial(degree)**len(cycle_edge))
     
@@ -289,11 +439,11 @@ def graphCovers_fast(base_edge_index, degree, cycle_edge, nb_covers=2):
     return graphCovers
 
 
-def graphCovers(base_edge_index, degree, nb_covers=2):
+def nxnaive_graphCovers(base_edge_index, degree, cycle_edge, nb_covers=2, connected=True):
     """
-    Generates a list of degree `degree` cover of the graph defined by 
-    `base_edge_index`. The elements of this list are pairwise non-isomorphic.
-
+    Naive version using the networkx is_isomorphic function, instead of
+    our custom one. This is much slower than above.
+    
     Parameters
     ----------
     base_edge_index : List of length 2 list/tuples
@@ -302,9 +452,17 @@ def graphCovers(base_edge_index, degree, nb_covers=2):
                       undirected graphs, if (i, j) is in the list, so is (j, i)
     degree : Int, greater than 1.
              Represents the degree (or number of sheets) of the cover to generate.
+    cycle_edge : List of length 2 lists/tuples
+                 Each element represents the edge for which we want nontrivial perumatations in the cover.
+                 If the there is one element for each cycle (for example the complement of a spanning tree),
+                 then the isomorphism classes will all be represented. When the base graph is connected,
+                 the length of this list should be equal to the 1-\chi(G), where \chi is the Euler Characteristic.
+                 This allows to speed up by a lot.
     nb_covers : Option Int or None
            If it is an Int, then it is the number of desired cover. Note that if it is too big, it won't be possible to generate nb_covers covers.
-           If None, all isomorphism classes are generated
+           If None, all isomorphism classes are generated.
+    connected: Boolean,
+               True if only connected covers should be considered, False otherwise.
 
     Returns
     ----------
@@ -314,4 +472,36 @@ def graphCovers(base_edge_index, degree, nb_covers=2):
     
     """
     unique = unique_edge(base_edge_index)
-    return graphCovers_fast(base_edge_index, degree, unique, nb_covers=nb_covers)
+    # make sure `cycle_edge_index` match with the `unique` representatives
+    cycle_edge_index = [i for i, e in enumerate(unique)
+                              if ([e[0], e[1]] in cycle_edge)
+                                  or ([e[1], e[0]] in cycle_edge)]
+    graphCovers = []
+    print("Total number of covers to check: ", factorial(degree)**len(cycle_edge))
+    
+    for i, mini_sig in enumerate(product(permutations(range(degree)),
+                                         repeat=len(cycle_edge))):
+        # this loop enumerates all candidate covers
+
+        # from minisig, we create the corresponding sigma 
+        sigma = [tuple(range(degree)) for i in range(len(unique))] # start with identity everywhere
+        for j, x in enumerate(cycle_edge_index):
+            sigma[x] = mini_sig[j] # change the permutation of edges in distinguished elements
+        sigma=tuple(sigma)
+
+        cover = Cover(base_edge_index, degree, sigma)
+        if (not connected) or nx.is_connected(cover.nxGraph):
+            is_new = True # checks if this is a new graph
+            for old in graphCovers:
+                if nx.is_isomorphic(old.nxGraph, cover.nxGraph):
+                    is_new = False
+                    break
+            
+            if is_new: # if the isomorphism class is not in graphCovers, add it to the list
+                graphCovers.append(cover)
+
+        if (not nb_covers is None) and len(graphCovers)==nb_covers:
+            print("We found ", nb_covers, " covers ! Only in ", i, " tries!")
+            return graphCovers
+    print("There are ", len(graphCovers), " degree ", degree, " covers!")
+    return graphCovers
