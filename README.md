@@ -6,3 +6,12 @@ In the paper, we give a topological description of all graphs than are indisingu
 
 ## Code
 In the code we focus on the generationg process, and give an efficient algorithm for testing if two generated graphs are isomorphic. Both are described in Section 3 of the paper. The codebase can be found in [covers.py](https://github.com/jacobbamberger/GraphCovers/blob/main/covers.py), but to get started we recommend checking out the [notebook](https://github.com/jacobbamberger/GraphCovers/blob/main/covers_notebook.ipynb). In the notebook we first generate some graphs, then visualize them, and finally try classifying them with several GNN architecures. Everything can be run on a CPU.
+
+## Getting started
+1. Start by installing the requirements:
+```
+python3 -m venv env
+pip install -r requirements.txt
+```
+2. Run the [notebook](https://github.com/jacobbamberger/GraphCovers/blob/main/covers_notebook.ipynb)
+3. Checkout the code in [covers.py](https://github.com/jacobbamberger/GraphCovers/blob/main/covers.py)
