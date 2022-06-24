@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import numpy as np
 import networkx as nx
 
-# TODO: Make tests
 # TODO: Generalize to disconnected covers. Either by adapting isom, or by constructing from disjoint unions of smaller covers...
 
 class Cover():
@@ -368,6 +367,8 @@ def gen_graphCovers(base_edge_index, degree, nb_covers=2, cycle_edge=None):
     that it consists of one edge per cycle for every cycle, such that
     no cycles have the same edge, then it covers all desired isomorphism
     classes. Having such a cycle_edge speeds up the algorithm considerably.
+    Note that in order to ensure that the number of graphs generated is large,
+    we need the base graph to satisfy the conditions of Theorem 3.1.
     TODO: Compute cycle_edge automatically. 
 
     Parameters
@@ -441,7 +442,7 @@ def gen_graphCovers(base_edge_index, degree, nb_covers=2, cycle_edge=None):
 def nxnaive_graphCovers(base_edge_index, degree, cycle_edge, nb_covers=2, connected=True):
     """
     Naive version using the networkx is_isomorphic function, instead of
-    our custom one. This is much slower than above.
+    our custom one. This is much slower than gen_graphCovers above.
     
     Parameters
     ----------
