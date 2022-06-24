@@ -15,3 +15,6 @@ pip install -r requirements.txt
 ```
 2. Run the [notebook](https://github.com/jacobbamberger/GraphCovers/blob/main/covers_notebook.ipynb)
 3. Checkout the code in [covers.py](https://github.com/jacobbamberger/GraphCovers/blob/main/covers.py)
+
+Hope you find it interesting!
+Please let me know if you have any comments/questions.
