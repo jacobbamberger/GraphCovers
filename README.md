@@ -8,6 +8,8 @@ In the paper, we give a topological description of all graphs than are indisingu
 In the code we focus on the generationg process, and give an efficient algorithm for testing if two generated graphs are isomorphic. Both are described in Section 3 of the paper. The codebase can be found in [covers.py](https://github.com/jacobbamberger/GraphCovers/blob/main/covers.py), but to get started we recommend checking out the [notebook](https://github.com/jacobbamberger/GraphCovers/blob/main/covers_notebook.ipynb). In the notebook we first generate some graphs, then visualize them, and finally try classifying them with several GNN architecures. Everything can be run on a CPU.
 
 ## Getting started
+You only need numpy and networkx to generate the dataset, plotly to vizualise the covers, and pytorch and pytorch-geometric to train the models on the jupyter notebook. If you don't have this in your environment, one option is to do the following:
+
 1. Start by installing the requirements:
 ```
 python3 -m venv env
