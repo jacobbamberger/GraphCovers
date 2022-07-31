@@ -263,16 +263,17 @@ class Cover():
             coord = nx.spring_layout(base, seed=100)
 
         # fix the coordinates
-        for i in range(9):
+        base_num_nodes = base.number_of_nodes()
+        for i in range(base_num_nodes):
             base.nodes[i]['pos'] = (coord[i][0], coord[i][1], 0.)
 
         # set cover coordinates
         size = len(G.nodes())
         scale = 0.5
         for i in range(size):
-            G.nodes[i]['pos'] = (base.nodes[i % 9]['pos'][0],
-                                 base.nodes[i % 9]['pos'][1],
-                                 base.nodes[i % 9]['pos'][2]+scale*float(i//9))
+            G.nodes[i]['pos'] = (base.nodes[i % base_num_nodes]['pos'][0],
+                                 base.nodes[i % base_num_nodes]['pos'][1],
+                                 base.nodes[i % base_num_nodes]['pos'][2]+scale*float(i//base_num_nodes))
 
         edge_x = []
         edge_y = []
